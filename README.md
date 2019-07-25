@@ -8,7 +8,7 @@ In this workshop, you will build a full OT to IT workflow for an **IoT Predictiv
 
 Labs summary:
 
-0. Setup the sandbox environment.
+0. Familiarize yourself with the sandbox environment
 1. On the **CDSW** cluster, train your model with the **Experiment** feature.
 2. On the **CDSW** cluster, deploy the model into production with the **Model** feature.
 3. On the Gateway host, run a simulator to send IoT sensors data to the MQTT broker.
@@ -23,27 +23,19 @@ Labs summary:
 - Ability to SSH into remote hosts from Windows or Mac. For Windows machines, install Putty or even better [install OpenSSH for PowerShell](https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse).
 - A modern browser like Google Chrome (IE not supported).
 
-## Lab 0 - Initial setup
+## Lab 0 - Access lab environment
 
-1. Create a CDH+CDSW cluster following [these instructions](https://github.com/fabiog1901/OneNodeCDHCluster) and **PLEASE NOTE** that due to a minor MiNiFi bug, you must comment out line `service minifi start` in `setup.sh`, [here](https://github.com/fabiog1901/OneNodeCDHCluster/blob/master/setup.sh#L236), before running `setup.sh`. You will be prompted to explicitly start MiNiFi in Lab 5. 
-Check the Troubleshooting at the end of this document for how to reset MiNiFi in case you forgot to do this step.
+1. Login into Cloudera Manager with username/password `admin/admin`, and familiarize yourself with the services installed. The Ports to access the other services are:
+    - Cloudera Manager:  7180
+    - Edge Flow Manager: 10080/efm/ui
+    - NiFi:              8080/nifi/
+    - NiFi Registry:     18080/nifi-registry
+    - Hue:               8888
+    - CDSW:              cdsw.<vm-public-IP\>.nip.io
+  
+2. Login into **Hue**. As you are the first user to login into Hue, you are granted admin privileges. At this point, you won't need to do anything on Hue, but by logging in, CDH has created your HDFS user and folder, which you will need for the next lab.
 
-2. Ensure you can SSH into the cluster, and that traffic from the cluster is only allowed from your own IP/VPN for security reasons.
-3. Login into Cloudera Manager with username/password `admin/admin`, and familiarize yourself with the services installed. The Ports to access the other services are:
-  - Cloudera Manager:  7180
-  - Edge Flow Manager: 10080/efm/ui
-  - NiFi:              8080/nifi/
-  - NiFi Registry:     18080/nifi-registry
-  - Hue:               8888
-  - CDSW:              cdsw.<vm-public-IP\>.nip.io   
-
-Login into **Hue**. As you are the first user to login into Hue, you are granted admin privileges. At this point, you won't need to do anything on Hue, but by logging in, CDH has created your HDFS user and folder, which you will need for the next lab. 
-
-Ensure you remember the username and password, as you will use these throughout this workshop.
-
-Below a screenshot of Chrome open with 6 tabs, one for each service.
-
-![text](./images/image10.png)
+3. TBD - any other lab access
 
 ## Lab 1 - CDSW: Train the model
 
