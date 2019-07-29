@@ -25,7 +25,11 @@ Labs summary:
 
 ## Lab 0 - Access lab environment
 
-1. Login into Cloudera Manager with username/password `admin/admin`, and familiarize yourself with the services installed. The Ports to access the other services are:
+1. Login into Cloudera Manager with username/password `admin/admin`, and
+   familiarize yourself with the services installed. Ensure you can access all
+   necessary services.  
+
+   The ports to access the other services are:
     - Cloudera Manager:  7180
     - Edge Flow Manager: 10080/efm/ui
     - NiFi:              8080/nifi/
@@ -35,29 +39,33 @@ Labs summary:
   
 2. Login into **Hue**. As you are the first user to login into Hue, you are granted admin privileges. At this point, you won't need to do anything on Hue, but by logging in, CDH has created your HDFS user and folder, which you will need for the next lab.
 
-3. TBD - any other lab access
-
 ## Lab 1 - CDSW: Train the model
 
-In this and the following lab, you will wear the hat of a Data Scientist. You will write the model code, train it several times and finally deploy the model to Production. All within 30 minutes!
+> In this and the following lab, you will wear the hat of a Data Scientist. You will write the model code, train it several times and finally deploy the model to Production
 
-**STEP 0** : Configure CDSW
+<details>
+<summary><strong>STEP 0 : Configure CDSW</strong></summary>
 
-Open CDSW Web UI and click on *sign up for a new account*. As you're the first user to login into CDSW, you are granted admin privileges.
+1. Open CDSW Web UI and click on *sign up for a new account*. Make sure to use the
+same username configured in Hue. As you're the first user to login into CDSW, you are granted admin
+privileges.
 
-![text](./images/image2.png)
+    ![text](./images/image2.png)
+2. Navigate to the CDSW **Admin** page to fine tune the environment:
 
-Navigate to the CDSW **Admin** page to fine tune the environment:
+    - in the **Engines** tab, add in _Engines Profiles_ a new engine (docker image) with 2 vCPUs and 4 GB RAM, while deleting the default engine.
+    - add the following in _Environmental Variables_:
 
-- in the **Engines** tab, add in _Engines Profiles_ a new engine (docker image) with 2 vCPUs and 4 GB RAM, while deleting the default engine.
-- add the following in _Environmental Variables_:
-   ```
-   HADOOP_CONF_DIR = /etc/hadoop/conf/
-   ```
+      ```bash
+      HADOOP_CONF_DIR = /etc/hadoop/conf/
+      ```
 
-  ![text](./images/image16.png)
+      ![text](./images/image16.png)
 
-**STEP 1** : Create the project
+</details>
+
+<details>
+<summary><strong>STEP 1 : Create the project</strong></summary>
 
 1. Return to the main page and click on **New Project**, using this GitHub project as the source: `https://github.com/fabiog1901/IoT-predictive-maintenance`
 
@@ -68,19 +76,22 @@ Navigate to the CDSW **Admin** page to fine tune the environment:
 3. Once the Engine is ready, run the following command to install some required
    libraries:
 
-   ```
+   ```bash
    !pip3 install --upgrade pip scikit-learn
    ```
 
 4. The project comes with a historical dataset. Copy this dataset into HDFS:
 
-   ```
+   ```bash
    !hdfs dfs -put data/historical_iot.txt /user/$HADOOP_USER_NAME
    ```
 
    ![text](./images/image22.png)
 
-**STEP 2** : Examine `cdsw.iot_exp.py`
+</details>
+
+<details>
+<summary><strong>STEP 2 : Examine <code>cdsw.iot_exp.py</code></strong></summary>
 
 Open the file `cdsw.iot_exp.py`. This is a python program that builds a model to predict machine failure (the likelihood that this machine is going to fail). There is a dataset available on hdfs with customer data, including a failure indicator field.
 
@@ -100,27 +111,30 @@ The Random Forest algorithm expects a couple of parameters:
 
 In the `cdsw.iot_exp.py` program, these parameters can be passed to the program at runtime, to these python variables:
 
-```
+```python
 param_numTrees = int(sys.argv[1])
 param_maxDepth = int(sys.argv[2])
 ```
 
 Also note the quality indicator for the Random Forest model, are written back to the Data Science Workbench repository:
 
-```
+```python
 cdsw.track_metric("auroc", auroc)
 cdsw.track_metric("ap", ap)
 ```
 
 These indicators will show up later in the **Experiments** dashboard.
 
-**STEP 3** : Run the experiment for the first time
+</details>
+
+<details>
+<summary><strong>STEP 3 : Run the experiment for the first time</strong></summary>
 
 1. From the menu, select `Run -> Run Experiments...` Now, in the background, the Data Science Workbench environment will spin up a new docker container, where this program will run.
 
     Run the experiment using the following parameters:
 
-    ```
+    ```python
     numTrees = 20 numDepth = 20
     ```
 
@@ -129,30 +143,41 @@ These indicators will show up later in the **Experiments** dashboard.
 2. Wait until the experiment completes. To check the status, return to the
    **Projects** page in CDSW, and hit the **Experiments** button. There is a
    Status indicator in the top right corner of this page.
+
+   > The experiment will go through the building, pushing, scheduling, and running statuses. This can take about 10 minutes
+
     - Once the status indicates 'Success', you should be able to see the auroc (Area Under the Curve) model quality indicator. It might be that this value is hidden by the CDSW user interface. In that case, click on the '3 metrics' links, and select the auroc field. It might be needed to de-select some other fields, since the interface can only show 3 metrics at the same time.
 
       ![text](./images/image12.png)
 
       In this example, ~0.8478. Not bad, but maybe there are better hyper
       parameter values available.
-      
+
     - In case the status is 'Build Failed' or 'Failed', check the log information. This is accessible by clicking on the run number of your experiments. There you can find the session log, as well as the build information.
 
       ![text](./images/image15.png)
 
-**STEP 4** : Re-run the experiment several times
+</details>
 
-Go back to the Workbench and run the experiment 2 more times and try different values for NumTrees and NumDepth. Try the following values:
-```
+<details>
+<summary><strong>STEP 4 : Re-run the experiment several times</strong></summary>
+
+Go back to the Workbench and run the experiment 2 more times and try different
+values for NumTrees and NumDepth. Try the following values:
+
+```bash
 NumTrees NumDepth
 15       25
 25       20
 ```
+
 When all runs have completed successfully, check which parameters had the best quality (best predictive value). This is represented by the highest 'area under the curve', auroc metric.
 
 ![text](./images/image27.png)
 
-**STEP 5** : Save the best model to your environment
+</details>
+<details>
+<summary><strong>STEP 5 : Save the best model to your environment</strong></summary>
 
 1. Select the run number with the best predictive value, in this case,
    experiment 2.
@@ -161,28 +186,37 @@ When all runs have completed successfully, check which parameters had the best q
     ![text](./images/image13.png)
     ![text](./images/image1.png)
 
+</details>
+
 ## Lab 2 - CDSW: Deploy the model
 
-**STEP 1** : Examine the program `cdsw.iot_model.py`
+<details>
+<summary><strong>STEP 1 : Examine and test the program <code>cdsw.iot_model.py</code></strong></summary>
 
 Open the project you created in the previous lab, and examine the file in the Workbench. This PySpark program uses the pickle.load mechanism to deploy models. The model it refers to the `iot_modelf.pkl` file, was saved in the previous lab from the experiment with the best predictive model.
 
 There is a predict definition which is the function that calls the model, using features, and will return a result variable.
 
-Before deploying the model, try it out in the Workbench: launch a Python3 engine and run the code in file `cdsw.iot_model.py`. Then call the `predict()` method from the prompt:
-```
-predict({"feature": "0, 65, 0, 137, 21.95, 83, 19.42, 111, 9.4, 6, 3.43, 4"})
-```
+1. Before deploying the model, try it out in the Workbench: launch a Python3 engine
+and run the code in file `cdsw.iot_model.py`. Then call the `predict()` method
+from the prompt:
 
-![text](./images/image18.png)
+    ```python
+    predict({"feature": "0, 65, 0, 137, 21.95, 83, 19.42, 111, 9.4, 6, 3.43, 4"})
+    ```
 
-The functions returns successfully, so we know we can now deploy the model. You can now stop the engine.
+    ![text](./images/image18.png)
 
-**STEP 2** : Deploy the model
+    The function returns successfully, so we know we can now deploy the model. You can now stop the engine.
+
+</details>
+
+<details>
+<summary><strong>STEP 2 : Deploy the model</strong></summary>
 
 1. From the projects page of your project, select the **Models** button. Select **New Model** and populate specify the following configuration:
 
-    ```
+    ```bash
     Name:          IoT Prediction Model
     Description:   IoT Prediction Model
     File:          cdsw.iot_model.py
@@ -195,20 +229,24 @@ The functions returns successfully, so we know we can now deploy the model. You 
 
     ![text](./images/image6.png)
 
-2. If all parameters are set, you can hit the **Deploy Model** button. Wait till the model is deployed. This will take several minutes.
+2. Once parameters are set, you can hit the **Deploy Model** button. Wait till
+   the model is deployed. This can take about 10 minutes
 
-**STEP 3** : Test the deployed model
+</details>
+
+<details>
+<summary><strong>STEP 3 : Test the deployed model</strong></summary>
 
 1. After several minutes, your model should get to the **Deployed** state. Now, click on the Model Name link, to go to the Model Overview page. From the that page, hit the **Test** button to check if the model is working.
 
-    The green color with success is telling that our REST call to the model is technically working. And if you examine the response: `{"result": 1}`, it returns a 1, which mean that machine with these features is likely to stay healthy.
+    > The green color with success is telling that our REST call to the model is technically working. And if you examine the response: `{"result": 1}`, it returns a 1, which mean that machine with these features is likely to stay healthy.
 
     ![text](./images/image11.png)
 
 2. Now, lets change the input parameters and call the predict function again.
    Put the following values in the Input field:
 
-   ```
+   ```python
    {
      "feature": "0, 95, 0, 88, 26.62, 75, 21.05, 115, 8.65, 5, 3.32, 3"
    }
@@ -216,68 +254,86 @@ The functions returns successfully, so we know we can now deploy the model. You 
 
     With these input parameters, the model returns 0, which means that the
     machine is likely to break.
-    
 3. Take a note of the AccessKey as you will need this for lab 6
+
+</details>
 
 ## Lab 3 - Gateway host: setup machine sensors simulator and MQTT broker
 
-In this lab you will run a simple Python script that simulates IoT sensor data from some hypothetical machines, and send the data to a MQTT broker, [mosquitto](https://mosquitto.org/). The gateway host is connected to many and different type of sensors, but they generally all share the same transport protocol, mqtt.
+> In this lab you will run a simple Python script that simulates IoT sensor data from some hypothetical machines, and send the data to a MQTT broker, [mosquitto](https://mosquitto.org/). The gateway host is connected to many and different type of sensors, but they generally all share the same transport protocol, mqtt.
 
-SSH into the VM, then install required libs and start the mosquitto broker
+<details>
+<summary><strong>ALL STEPS : Install and run simulator</strong></summary>
 
-```
-$ sudo su -
-$ yum install -y mosquitto
-$ pip install paho-mqtt
-$ systemctl enable mosquitto
-$ systemctl start mosquitto
-```
+1. SSH into the VM, then install required libs and start the mosquitto broker
 
-Now clone this repo, then run the simulator to send sensor data to mosquitto.
+    ```bash
+    sudo su -
+    yum install -y mosquitto
+    pip install paho-mqtt
+    systemctl enable mosquitto
+    systemctl start mosquitto
+    ```
 
-```
-$ git clone https://github.com/fabiog1901/IoT-predictive-maintenance.git
-$ mv IoT-predictive-maintenance/mqtt.* ~
-$ python mqtt.iot_simulator.py mqtt.iot.config
-```
+2. Now clone this repo, then run the simulator to send sensor data to mosquitto.
 
-You should see an output generated similar to the below:
+    ```bash
+    git clone https://github.com/fabiog1901/IoT-predictive-maintenance.git
+    mv IoT-predictive-maintenance/mqtt.* ~
+    python mqtt.iot_simulator.py mqtt.iot.config
+    ```
 
-```
-iot: {"sensor_id": 48, "sensor_ts": 1556758787735011, "sensor_0": 2, "sensor_1": 14, "sensor_2": 5, "sensor_3": 43, "sensor_4": 34, "sensor_5": 97, "sensor_6": 29, "sensor_7": 121, "sensor_8": 5, "sensor_9": 2, "sensor_10": 5}
-iot: {"sensor_id": 24, "sensor_ts": 1556758797738580, "sensor_0": 1, "sensor_1": 9, "sensor_2": 5, "sensor_3": 46, "sensor_4": 39, "sensor_5": 87, "sensor_6": 51, "sensor_7": 142, "sensor_8": 47, "sensor_9": 4, "sensor_10": 8}
-iot: {"sensor_id": 70, "sensor_ts": 1556758807751841, "sensor_0": 2, "sensor_1": 1, "sensor_2": 1, "sensor_3": 48, "sensor_4": 8, "sensor_5": 70, "sensor_6": 15, "sensor_7": 103, "sensor_8": 22, "sensor_9": 1, "sensor_10": 2}
-```
+    You should see an output generated similar to the below:
 
-Now that there is sample data output, you can stop the simulator now, with Ctrl+C.
+    ```bash
+    iot: {"sensor_id": 48, "sensor_ts": 1556758787735011, "sensor_0": 2, "sensor_1": 14, "sensor_2": 5, "sensor_3": 43, "sensor_4": 34, "sensor_5": 97, "sensor_6": 29, "sensor_7": 121, "sensor_8": 5, "sensor_9": 2, "sensor_10": 5}
+    iot: {"sensor_id": 24, "sensor_ts": 1556758797738580, "sensor_0": 1, "sensor_1": 9, "sensor_2": 5, "sensor_3": 46, "sensor_4": 39, "sensor_5": 87, "sensor_6": 51, "sensor_7": 142, "sensor_8": 47, "sensor_9": 4, "sensor_10": 8}
+    iot: {"sensor_id": 70, "sensor_ts": 1556758807751841, "sensor_0": 2, "sensor_1": 1, "sensor_2": 1, "sensor_3": 48, "sensor_4": 8, "sensor_5": 70, "sensor_6": 15, "sensor_7": 103, "sensor_8": 22, "sensor_9": 1, "sensor_10": 2}
+    ```
+
+3. Now that there is sample data output, you can stop the simulator now, with Ctrl+C.
+
+</details>
 
 ## Lab 4 - Gateway host: configure and run MiNiFi
 
-MiNiFi is installed in the gateway host. In this lab you will configure and run MiNiFi to read from the mosquitto broker and forward to the NiFi cluster, but it's only in the next lab that you will provide the flow to execute.
+> MiNiFi is installed in the gateway host. In this lab you will configure and run MiNiFi to read from the mosquitto broker and forward to the NiFi cluster, but it's only in the next lab that you will provide the flow to execute.
+
+<details>
+<summary><strong>ALL STEPS : Configure MQTT</strong></summary>
 
 1. Download the NiFi MQTT Processor to read from mosquitto
 
-    ```
-    $ cd ~
-    $ wget http://central.maven.org/maven2/org/apache/nifi/nifi-mqtt-nar/1.8.0/nifi-mqtt-nar-1.8.0.nar -P /opt/cloudera/cem/minifi/lib
-    $ chown root:root /opt/cloudera/cem/minifi/lib/nifi-mqtt-nar-1.8.0.nar
-    $ chmod 660 /opt/cloudera/cem/minifi/lib/nifi-mqtt-nar-1.8.0.nar
+    ```bash
+    cd ~
+
+    wget http://central.maven.org/maven2/org/apache/nifi/nifi-mqtt-nar/1.8.0/nifi-mqtt-nar-1.8.0.nar -P /opt/cloudera/cem/minifi/lib
+
+    chown root:root /opt/cloudera/cem/minifi/lib/nifi-mqtt-nar-1.8.0.nar
+
+    chmod 660 /opt/cloudera/cem/minifi/lib/nifi-mqtt-nar-1.8.0.nar
     ```
 
 2. You can now start the MiNiFi agent
 
+    ```bash
+    systemctl start minifi
     ```
-    $ systemctl start minifi
-    ```
+
 3. You might want to check the logs to confirm all is good:
 
+    ```bash
+    cat /opt/cloudera/cem/minifi/logs/minifi-app.log
     ```
-    $ cat /opt/cloudera/cem/minifi/logs/minifi-app.log
-    ```
+
+</details>
 
 ## Lab 5 - Configuring Edge Flow Management
 
-Cloudera Edge Flow Management gives you a visual overview of all MiNiFi agents in your environment, and allows you to update the flow configuration for each one, with versioning control thanks to the **NiFi Registry** integration. In this lab, you will create the MiNiFi flow and publish it for the MiNiFi agent to pick it up.
+> Cloudera Edge Flow Management gives you a visual overview of all MiNiFi agents in your environment, and allows you to update the flow configuration for each one, with versioning control thanks to the **NiFi Registry** integration. In this lab, you will create the MiNiFi flow and publish it for the MiNiFi agent to pick it up.
+
+<details>
+<summary><strong>STEP 0 : Check connection and open Flow Designer</strong></summary>
 
 1. Open the EFM Web UI at http://public-hostname:10080/efm/ui. Ensure you see your minifi agent's heartbeat messages in the **Events Monitor**.
 
@@ -285,89 +341,121 @@ Cloudera Edge Flow Management gives you a visual overview of all MiNiFi agents i
 
 2. You can then select the **Flow Designer** tab and build the flow. To build a dataflow, select the desired class from the table and click OPEN. Alternatively, you can double-click on the desired class.
 
-3. Add a _ConsumeMQTT_ Processor to the canvas and configure it with below settings:
-    ```
+</details>
+
+<details>
+<summary><strong>STEP 1 : Configure the Flow</strong></summary>
+
+1. Add a _ConsumeMQTT_ Processor to the canvas and configure it with below
+   settings:
+
+    ```bash
     Broker URI: tcp://localhost:1883
     Client ID: minifi-iot
     Topic Filter: iot/#
     Max Queue Size = 60
     ```
+
     ![text](./images/image9.png)
 
-4. Add a _Remote Process Group_ to the canvas and configure it as follows:
-    ```
+2. Add a _Remote Process Group_ to the canvas and configure it as follows:
+
+    ```bash
     URL = http://<hostname>:8080/nifi
     ```
+
     ![text](./images/image24.png)
 
-5. At this point you need to connect the ConsumerMQTT processor to the RPG,
+3. At this point you need to connect the ConsumerMQTT processor to the RPG,
 however, you first need the ID of the NiFi entry port. Open NiFi Web UI at
-   http://public-hostname:8080/nifi/ and add an _Input Port_ to the canvas. Call
+   <http://public-hostname:8080/nifi/> and add an _Input Port_ to the canvas. Call
    it something like "from Gateway" and copy the ID of the input port, as you
    will soon need it.
 
     ![text](./images/image4.png)
 
-6. To close the NiFI flow - as it is required -, you can temporarily add a
+4. To close the NiFI flow - as it is required -, you can temporarily add a
 _LogAttribute_ processor, and setup 2 connections:
 
     - from the Input Port to LogAttribute;
     - from LogAttribute to itself.
 
-7. Start the InputPort, but keep the LogAttribute in a stopped state.
+5. Start the InputPort, but keep the LogAttribute in a stopped state. This is
+   done by selecting the ImportPort and then using the 'Operate' toolbox options on the left hand side of the interface
 
     ![text](./images/image26.png)
 
-8. Back to the Flow Designer, connect the ConsumeMQTT to the RPG. The connection requires an ID and you can paste here the ID you just copied.
+6. Back to the Flow Designer, connect the ConsumeMQTT to the RPG. The connection
+   requires an ID and you can paste here the ID you just copied, ensuring no
+   leading or trailing whitespace
 
     ![text](./images/image7.png)
 
-9. The Flow is now complete, but before publishing it, create the Bucket in the NiFi Registry so that all versions of your flows are stored for review and audit. Open the NiFi Registry at http://public-hostname:18080/nifi-registry and create a bucket called "IoT".
+7. The Flow is now complete, but before publishing it, create the Bucket in the NiFi Registry so that all versions of your flows are stored for review and audit. Open the NiFi Registry at <http://public-hostname:18080/nifi-registry> and create a bucket called "IoT".
 
     ![text](./images/image25.png)
 
-10. You can now publish the flow for the minifi agent to automatically pick up.
+</details>
+
+<details>
+<summary><strong>STEP 2 : Publish Flow and start data simulator</strong></summary>
+
+1. You can now publish the flow for the minifi agent to automatically pick up.
 
     ![text](./images/image21.png)
 
-    If successful, you will see the Flow details in the NiFi Registry.
+    Ensure success by seeing the Flow details in the NiFi Registry.
 
     ![text](./images/image17.png)
 
-11. At this point, you can test the edge flow up until NiFi. Start the simulator
-again and confirm you can see the messages queued in NiFi.
+2. At this point, you can test the edge flow up until NiFi. Start the simulator
+   again and confirm you can see the messages queued in NiFi. It can take a
+   minute before messages begin to queue
 
-    ```
-    $ python mqtt.iot_simulator.py mqtt.iot.config
+    ```bash
+    python mqtt.iot_simulator.py mqtt.iot.config
     ```
 
     ![text](./images/image29.png)
 
+</details>
+
 ## Lab 6 - Configuring the NiFi flow and push to Kafka
 
-In this lab, you will create a NiFi flow to receive the data from all gateways and push it to **Kafka**.
+> In this lab, you will create a NiFi flow to receive the data from all gateways and push it to **Kafka**.
+
+<details>
+<summary><strong>ALL STEPS : Configure Kafka publisher</strong></summary>
 
 1. Open the NiFi web UI and add a _PublishKafka_2.0_ processor and configure it as follows:
 
-    ```
+    ```bash
     Kafka Brokers: <hostname>:9092
     Topic Name: iot
-    Use Transactions: False
+    Use Transactions: false
     ```
 
-2. Connect the Input Port to the PublishKafka processor by dragging the destination of the current connection from the LogAttribute to the PublishKafka. As with the LogAttribute, create a connection from the PublishKafka to itself. Then you can start the Kafka processor.
+2. Connect the Input Port to the PublishKafka processor by dragging the
+   destination of the current connection from the LogAttribute to the
+   PublishKafka. As with the LogAttribute, create a connection from the
+   PublishKafka to itself. Select both 'success' and 'failure' in the for Relationships option. Then you can start the Kafka processor.
 
     ![text](./images/image3.png)
 
-    You can add more processors as needed to process, split, duplicate or re-route your FlowFiles to all other destinations and processors.
+    > You can add more processors as needed to process, split, duplicate or re-route your FlowFiles to all other destinations and processors.
 
-## Lab 7 - Use Spark to call the model endpoint and save to Kudu 
+</details>
 
-Spark Streaming is a processing framework for (near) real-time data. In this lab, you will use Spark to consume Kafka messages which contains the IoT data from the machine, and call the model API endpoint to predict whether, with those IoT values the machine sent, the machine is likely to break. Then save the results to Kudu for fast analytics.
+## Lab 7 - Use Spark to call the model endpoint and save to Kudu
+
+> Spark Streaming is a processing framework for (near) real-time data. In this lab, you will use Spark to consume Kafka messages which contains the IoT data from the machine, and call the model API endpoint to predict whether, with those IoT values the machine sent, the machine is likely to break. Then save the results to Kudu for fast analytics.
+
+<details>
+<summary><strong>ALL STEPS : Configure Kudu and Spark job</strong></summary>
 
 1. First, create the Kudu table. Login into Hue, and in the Impala Query, run this statement:
 
-    ```
+    ```sql
     CREATE TABLE sensors
     (
     sensor_id INT,
@@ -398,37 +486,54 @@ Spark Streaming is a processing framework for (near) real-time data. In this lab
 
 3. Open a second Terminal and SSH into the VM. The first is running the sensor data simulator, so you can't use it.
 
-    ```
-    $ sudo su -
-    $ ACCESS_KEY=<put here your cdsw model access key>
-    $ PUBLIC_IP=`curl https://api.ipify.org/`
-    $ mv ~/IoT-predictive-maintenance/spark.iot.py ~
-    $ sed -i "s/YourHostname/`hostname -f`/" spark.iot.py
-    $ sed -i "s/YourCDSWDomain/cdsw.$PUBLIC_IP.nip.io/" spark.iot.py
-    $ sed -i "s/YourAccessKey/$ACCESS_KEY/" spark.iot.py
-    $ wget  http://central.maven.org/maven2/org/apache/kudu/kudu-spark2_2.11/1.9.0/kudu-spark2_2.11-1.9.0.jar
-    $ wget https://raw.githubusercontent.com/swordsmanliu/SparkStreamingHbase/master/lib/spark-core_2.11-1.5.2.logging.jar
-    $ rm -rf ~/.m2 ~/.ivy2/
-    $ spark-submit --master local[2] --jars kudu-spark2_2.11-1.9.0.jar,spark-core_2.11-1.5.2.logging.jar --packages org.apache.spark:spark-streaming-kafka_2.11:1.6.3 spark.iot.py
+    ```bash
+    sudo su -
+
+    ACCESS_KEY=<put here your cdsw model access key>
+
+    PUBLIC_IP=`curl https://api.ipify.org/`
+
+    mv ~/IoT-predictive-maintenance/spark.iot.py ~
+
+    sed -i "s/YourHostname/`hostname -f`/" spark.iot.py
+
+    sed -i "s/YourCDSWDomain/cdsw.$PUBLIC_IP.nip.io/" spark.iot.py
+
+    sed -i "s/YourAccessKey/$ACCESS_KEY/" spark.iot.py
+
+    wget  http://central.maven.org/maven2/org/apache/kudu/kudu-spark2_2.11/1.9.0/kudu-spark2_2.11-1.9.0.jar
+
+    wget https://raw.githubusercontent.com/swordsmanliu/SparkStreamingHbase/master/lib/spark-core_2.11-1.5.2.logging.jar
+
+    rm -rf ~/.m2 ~/.ivy2/
+
+    spark-submit --master local[2] --jars kudu-spark2_2.11-1.9.0.jar,spark-core_2.11-1.5.2.logging.jar --packages org.apache.spark:spark-streaming-kafka_2.11:1.6.3 spark.iot.py
     ```
 
     Spark Streaming will flood your screen with log messages, however, at a 5 seconds interval, you should be able to spot a table: these are the messages that were consumed from Kafka and processed by Spark. You can configure Spark for a smaller time window, however, for this exercise 5 seconds is sufficient.
 
     ![text](./images/image20.png)
 
+</details>
+
 ## Lab 8 - Fast analytics on fast data with Kudu and Impala
 
-In this lab, you will run some SQL queries using the Impala engine. You can run a report to inform you which machines are likely to break in the near future.
+> In this lab, you will run some SQL queries using the Impala engine. You can run a report to inform you which machines are likely to break in the near future.
+
+<details>
+<summary><strong>ALL STEPS : Query sensor data</strong></summary>
 
 1. Login into Hue, and run the following statement in the Impala Query
 
-    ```
+    ```sql
     select sensor_id, sensor_ts from sensors where is_healthy = 0;
     ```
 
 2. Run a few times a SQL statement to count all rows in the table to confirm the latest inserts are always picked up by Impala. This allows you to build real-time reports for fast action.
 
     ![text](./images/image5.png)
+
+</details>
 
 ## Appendix
 <details>
